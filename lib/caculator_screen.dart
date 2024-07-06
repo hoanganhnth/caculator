@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class CaculatorScreen extends StatefulWidget {
@@ -11,12 +12,14 @@ class CaculatorScreen extends StatefulWidget {
 
 class _CaculatorScreenState extends State<CaculatorScreen> {
   final ValueNotifier<String> _resultText = ValueNotifier("");
-  String _actionText = "";
   bool _isNewCalculator = true;
   // List<String> listMulDiv = [];
-  double valueCurrent = 0;
-  String firstNumber = "";
-  String secondNumber = "";
+  String currentNumber = "";
+  double currentValue = 0;
+  String actionPlusMinus = "";
+  double valueMulDi = 1;
+  String actionMulDi = "";
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -266,9 +269,7 @@ class _CaculatorScreenState extends State<CaculatorScreen> {
 
         break;
       case "C":
-        if (_isNewCalculator) {
-          return;
-        }
+        checkIsNewCalculator();
         if (_resultText.value.isNotEmpty) {
           _resultText.value =
               _resultText.value.substring(0, _resultText.value.length - 1);
@@ -277,119 +278,161 @@ class _CaculatorScreenState extends State<CaculatorScreen> {
       case "-":
       case "x":
       case ":":
-        if (_isNewCalculator) {
-          return;
-        }
-        firstNumber = _resultText.value;
+        checkIsNewCalculator();
         _resultText.value += text;
-
-        _actionText = text;
         break;
       case "=":
-        if (_isNewCalculator) {
-          return;
-        }
-        if (_actionText.isNotEmpty) {
-          String currentNumber = "";
-          double currentValue = 0;
-          String actionCurrret = "";
-          double valueMulDi = 1;
-          String actionMulDi = "";
+        checkIsNewCalculator();
+        for (int i = 0; i < _resultText.value.length; i++) {
+          if (checkIsNumber(i)) {
+            updateCurrentNumber(i);
 
-          for (int i = 0; i < _resultText.value.length; i++) {
-            if (_resultText.value[i] != "+" &&
-                _resultText.value[i] != "-" &&
-                _resultText.value[i] != "x" &&
-                _resultText.value[i] != ":") {
-              currentNumber += _resultText.value[i];
-
-              if (i != _resultText.value.length - 1) {
-                if (_resultText.value[i + 1] == "x" ||
-                    _resultText.value[i + 1] == ":") {
-                  if (actionMulDi.isNotEmpty) {
-                    if (actionMulDi == "x") {
-                      valueMulDi *= int.parse(currentNumber);
-                    } else {
-                      valueMulDi = valueMulDi * -1 / int.parse(currentNumber);
-                    }
-                  } else {
-                    valueMulDi = double.parse(currentNumber);
-                  }
-                } else if (_resultText.value[i + 1] == "+" ||
-                    _resultText.value[i + 1] == "-") {
-                  if (actionMulDi.isNotEmpty) {
-                    if (actionMulDi == "x") {
-                      valueMulDi *= int.parse(currentNumber);
-                    } else if (actionMulDi == ":") {
-                      valueMulDi /= int.parse(currentNumber);
-                    }
-                    if (actionCurrret == "+") {
-                      currentValue += valueMulDi;
-                    } else if (actionCurrret == "-") {
-                      currentValue -= valueMulDi;
-                    } else {
-                      currentValue += valueMulDi;
-                    }
-                    actionMulDi = "";
-                    valueMulDi = 1;
-                  } else {
-                    if (actionCurrret == "+") {
-                      currentValue += int.parse(currentNumber);
-                    } else if (actionCurrret == "-") {
-                      currentValue -= int.parse(currentNumber);
-                    } else if (actionCurrret == "") {
-                      currentValue += int.parse(currentNumber);
-                    }
-                  }
-                }
-              } else {
-                if (actionMulDi.isNotEmpty) {
-                  if (actionMulDi == "x") {
-                    valueMulDi *= int.parse(currentNumber);
-                  } else {
-                    valueMulDi /= double.parse(currentNumber);
-                  }
-                  if (actionCurrret == "+") {
-                    currentValue += valueMulDi;
-                  } else if (actionCurrret == "-") {
-                    currentValue -= valueMulDi;
-                  } else {
-                    currentValue += valueMulDi;
-                  }
+            if (checkIndexisLast(i)) {
+              if (checkNextIsMulDiAction(i)) {
+                if (checkHasMultiDiBefore()) {
+                  handleMulDi();
                 } else {
-                  if (actionCurrret == "+") {
-                    currentValue += int.parse(currentNumber);
-                  } else if (actionCurrret == "-") {
-                    currentValue -= int.parse(currentNumber);
-                  } else if (actionCurrret == "") {
-                    currentValue += int.parse(currentNumber);
-                  }
+                  updateMulDiCurrentValue();
+                }
+              } else if (checkNextIsPlusMinus(i)) {
+                if (checkHasMultiDiBefore()) {
+                  handleMulDi();
+
+                  updateCurrentValue();
+                  resetCurrentMulDiValue();
+                } else {
+                  handlePlusMinus();
                 }
               }
-            }
-            if (_resultText.value[i] == "+" || _resultText.value[i] == "-") {
-              actionCurrret = _resultText.value[i];
-              currentNumber = "";
-            } else if (_resultText.value[i] == "x" ||
-                _resultText.value[i] == ":") {
-              actionMulDi = _resultText.value[i];
-              currentNumber = "";
+            } else {
+              if (checkHasMultiDiBefore()) {
+                handleMulDi();
+                updateCurrentValue();
+              } else {
+                handlePlusMinus();
+              }
             }
           }
-          print(currentValue);
-          if (currentValue.toInt() == currentValue) {
-            _resultText.value = currentValue.toInt().toString();
-          } else {
-            _resultText.value = currentValue.toString();
+          if (checkCurrentIsPlusMinus(i)) {
+            resetCurrentUpdateActionPlusMinus(i);
+          } else if (checkCurrentIsMulDi(i)) {
+            resetCurrentUpdateActionMulDi(i);
           }
-
-          resetData();
         }
+        updateIfIsInt();
+
+        if (kDebugMode) {
+          print(currentValue);
+        }
+
+        resetData();
     }
   }
 
+  void checkIsNewCalculator() {
+    if (_isNewCalculator) {
+      return;
+    }
+  }
+
+  void updateIfIsInt() {
+    if (currentValue.toInt() == currentValue) {
+      _resultText.value = currentValue.toInt().toString();
+    } else {
+      _resultText.value = currentValue.toString();
+    }
+  }
+
+  void resetCurrentUpdateActionMulDi(int i) {
+    actionMulDi = _resultText.value[i];
+    currentNumber = "";
+  }
+
+  void resetCurrentUpdateActionPlusMinus(int i) {
+    actionPlusMinus = _resultText.value[i];
+    currentNumber = "";
+  }
+
+  void handlePlusMinus() {
+    if (actionPlusMinus == "+") {
+      currentValue += int.parse(currentNumber);
+    } else if (actionPlusMinus == "-") {
+      currentValue -= int.parse(currentNumber);
+    } else if (actionPlusMinus == "") {
+      currentValue += int.parse(currentNumber);
+    }
+  }
+
+  void resetCurrentMulDiValue() {
+    actionMulDi = "";
+    valueMulDi = 1;
+  }
+
+  void updateCurrentValue() {
+    if (actionPlusMinus == "+") {
+      currentValue += valueMulDi;
+    } else if (actionPlusMinus == "-") {
+      currentValue -= valueMulDi;
+    } else {
+      currentValue += valueMulDi;
+    }
+  }
+
+  void handleMulDi() {
+    if (actionMulDi == "x") {
+      valueMulDi *= int.parse(currentNumber);
+    } else if (actionMulDi == ":") {
+      valueMulDi /= int.parse(currentNumber);
+    }
+  }
+
+  void updateMulDiCurrentValue() {
+    valueMulDi = double.parse(currentNumber);
+  }
+
+  void updateCurrentNumber(int i) {
+    currentNumber += _resultText.value[i];
+  }
+
   void resetData() {
-    // _isNewCalculator = true;
+    currentValue = 0;
+    actionPlusMinus = "";
+    valueMulDi = 1;
+    actionMulDi = "";
+    _isNewCalculator = true;
+    currentNumber = "";
+    // _resultText.value = "";
+  }
+
+  bool checkCurrentIsMulDi(int i) {
+    return _resultText.value[i] == "x" || _resultText.value[i] == ":";
+  }
+
+  bool checkCurrentIsPlusMinus(int i) {
+    return _resultText.value[i] == "+" || _resultText.value[i] == "-";
+  }
+
+  bool checkNextIsPlusMinus(int i) {
+    return _resultText.value[i + 1] == "+" || _resultText.value[i + 1] == "-";
+  }
+
+  bool checkHasMultiDiBefore() {
+    return actionMulDi.isNotEmpty;
+  }
+
+  bool checkNextIsMulDiAction(int i) {
+    return _resultText.value[i + 1] == "x" || _resultText.value[i + 1] == ":";
+  }
+
+  bool checkIndexisLast(int i) {
+    return i != _resultText.value.length - 1;
+  }
+
+  bool checkIsNumber(int i) {
+    return _resultText.value[i] != "+" &&
+        _resultText.value[i] != "-" &&
+        _resultText.value[i] != "x" &&
+        _resultText.value[i] != ":";
   }
 }
 
