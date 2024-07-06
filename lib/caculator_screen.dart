@@ -1,3 +1,4 @@
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -13,12 +14,20 @@ class CaculatorScreen extends StatefulWidget {
 class _CaculatorScreenState extends State<CaculatorScreen> {
   final ValueNotifier<String> _resultText = ValueNotifier("");
   bool _isNewCalculator = true;
-  // List<String> listMulDiv = [];
+
+  // chữ số hiện tại
   String currentNumber = "";
+  // giá trị tổng hiện tại
   double currentValue = 0;
+  // chữ cái + - hiện tại
   String actionPlusMinus = "";
+  // giá trị tích chia đang tính
   double valueMulDi = 1;
+  // chữ cái x : hiện tại
   String actionMulDi = "";
+  // giá trị sau dấu . đang tính
+  double valueDigit = 0;
+  int numberDigit = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -244,9 +253,8 @@ class _CaculatorScreenState extends State<CaculatorScreen> {
 
   handleCalculate(String text, {bool isClear = false}) {
     if (isClear) {
+      resetData();
       _resultText.value = "";
-
-      _isNewCalculator = true;
       return;
     }
     switch (text) {
@@ -278,6 +286,7 @@ class _CaculatorScreenState extends State<CaculatorScreen> {
       case "-":
       case "x":
       case ":":
+      case ".":
         checkIsNewCalculator();
         _resultText.value += text;
         break;
@@ -286,8 +295,8 @@ class _CaculatorScreenState extends State<CaculatorScreen> {
         for (int i = 0; i < _resultText.value.length; i++) {
           if (checkIsNumber(i)) {
             updateCurrentNumber(i);
-
-            if (checkIndexisLast(i)) {
+            // updateDigit(i);
+            if (checkIndexNotIsLast(i)) {
               if (checkNextIsMulDiAction(i)) {
                 if (checkHasMultiDiBefore()) {
                   handleMulDi();
@@ -312,11 +321,13 @@ class _CaculatorScreenState extends State<CaculatorScreen> {
                 handlePlusMinus();
               }
             }
-          }
-          if (checkCurrentIsPlusMinus(i)) {
+          } else if (checkCurrentIsPlusMinus(i)) {
             resetCurrentUpdateActionPlusMinus(i);
           } else if (checkCurrentIsMulDi(i)) {
             resetCurrentUpdateActionMulDi(i);
+          } else if (checkCurrentIsDot(i)) {
+            // numberDigit = 1;
+            updateCurrentNumber(i);
           }
         }
         updateIfIsInt();
@@ -328,6 +339,16 @@ class _CaculatorScreenState extends State<CaculatorScreen> {
         resetData();
     }
   }
+
+  // void updateDigit(int i) {
+  //   if (numberDigit > 0) {
+  //     valueDigit += double.parse(_resultText.value[i]) / pow(10, numberDigit);
+  //     numberDigit++;
+  //     if (!checkIsNumber(i + 1)) {
+  //       numberDigit = 0;
+  //     }
+  //   }
+  // }
 
   void checkIsNewCalculator() {
     if (_isNewCalculator) {
@@ -355,11 +376,11 @@ class _CaculatorScreenState extends State<CaculatorScreen> {
 
   void handlePlusMinus() {
     if (actionPlusMinus == "+") {
-      currentValue += int.parse(currentNumber);
+      currentValue += double.parse(currentNumber);
     } else if (actionPlusMinus == "-") {
-      currentValue -= int.parse(currentNumber);
+      currentValue -= double.parse(currentNumber);
     } else if (actionPlusMinus == "") {
-      currentValue += int.parse(currentNumber);
+      currentValue += double.parse(currentNumber);
     }
   }
 
@@ -380,9 +401,9 @@ class _CaculatorScreenState extends State<CaculatorScreen> {
 
   void handleMulDi() {
     if (actionMulDi == "x") {
-      valueMulDi *= int.parse(currentNumber);
+      valueMulDi *= double.parse(currentNumber);
     } else if (actionMulDi == ":") {
-      valueMulDi /= int.parse(currentNumber);
+      valueMulDi /= double.parse(currentNumber);
     }
   }
 
@@ -401,7 +422,12 @@ class _CaculatorScreenState extends State<CaculatorScreen> {
     actionMulDi = "";
     _isNewCalculator = true;
     currentNumber = "";
+    valueDigit = 0;
     // _resultText.value = "";
+  }
+
+  bool checkCurrentIsDot(int i) {
+    return _resultText.value[i] == ".";
   }
 
   bool checkCurrentIsMulDi(int i) {
@@ -420,11 +446,15 @@ class _CaculatorScreenState extends State<CaculatorScreen> {
     return actionMulDi.isNotEmpty;
   }
 
+  bool checkNextIsDot(int i) {
+    return _resultText.value[i + 1] == ".";
+  }
+
   bool checkNextIsMulDiAction(int i) {
     return _resultText.value[i + 1] == "x" || _resultText.value[i + 1] == ":";
   }
 
-  bool checkIndexisLast(int i) {
+  bool checkIndexNotIsLast(int i) {
     return i != _resultText.value.length - 1;
   }
 
@@ -432,7 +462,8 @@ class _CaculatorScreenState extends State<CaculatorScreen> {
     return _resultText.value[i] != "+" &&
         _resultText.value[i] != "-" &&
         _resultText.value[i] != "x" &&
-        _resultText.value[i] != ":";
+        _resultText.value[i] != ":" &&
+        _resultText.value[i] != ".";
   }
 }
 
